@@ -214,6 +214,25 @@ func (c *Client) Get(ctx context.Context, targetURL string, headers http.Header)
 	return c.httpClient.Do(req)
 }
 
+// GetNoRedirect makes a GET request and returns redirect responses without following them.
+func (c *Client) GetNoRedirect(ctx context.Context, targetURL string, headers http.Header) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", targetURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("steamapi: failed to create request: %w", err)
+	}
+
+	for k, v := range headers {
+		req.Header[k] = v
+	}
+
+	client := *c.httpClient
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
+	return client.Do(req)
+}
+
 // SetCookie adds a cookie to the client's cookie jar for the given domain.
 func (c *Client) SetCookie(domain, name, value string) {
 	u, _ := url.Parse(domain)

@@ -94,6 +94,7 @@ func NewSession(opts ...SessionOption) (*SteamSession, error) {
 		steamID, _ := token.SteamID64()
 		sess.steamID = steamID
 		sess.platform = token.Platform()
+		sess.setRefreshTokenCookie()
 	}
 
 	if cfg.accessToken != "" {
@@ -320,6 +321,7 @@ func (s *SteamSession) Finalize(ctx context.Context, timeout time.Duration) (*St
 			s.refreshToken = refreshToken
 			s.accessToken = accessToken
 			s.api.AccessToken = accessToken.Raw
+			s.setRefreshTokenCookie()
 
 			if pollResp.AccountName != "" {
 				s.accountName = pollResp.AccountName
@@ -394,6 +396,10 @@ func (s *SteamSession) RefreshAccessToken(ctx context.Context) (*SteamToken, err
 		return nil, ErrNoRefreshToken
 	}
 
+	if s.platform == PlatformWeb {
+		return s.refreshAccessTokenForWeb(ctx)
+	}
+
 	resp, err := s.api.GenerateAccessTokenForApp(ctx, s.refreshToken.Raw, s.steamID)
 	if err != nil {
 		return nil, fmt.Errorf("steamkit/auth: failed to refresh access token: %w", err)
@@ -412,6 +418,7 @@ func (s *SteamSession) RefreshAccessToken(ctx context.Context) (*SteamToken, err
 		newRefresh, err := ParseToken(resp.RefreshToken)
 		if err == nil {
 			s.refreshToken = newRefresh
+			s.setRefreshTokenCookie()
 		}
 	}
 
@@ -419,6 +426,61 @@ func (s *SteamSession) RefreshAccessToken(ctx context.Context) (*SteamToken, err
 }
 
 // --- Web Cookies ---
+
+const refreshTokenCookieName = "steamRefresh_steam"
+
+func (s *SteamSession) setRefreshTokenCookie() {
+	if s.refreshToken == nil || s.refreshToken.Platform() != PlatformWeb {
+		return
+	}
+	s.api.SetCookie(steamapi.LoginURL, refreshTokenCookieName, s.refreshToken.CookieValue())
+}
+
+func (s *SteamSession) refreshAccessTokenForWeb(ctx context.Context) (*SteamToken, error) {
+	s.setRefreshTokenCookie()
+
+	headers := http.Header{}
+	headers.Set("Accept", "application/json, text/plain, */*")
+	headers.Set("Referer", steamapi.CommunityURL+"/")
+	headers.Set("Origin", steamapi.CommunityURL)
+
+	refreshURL := steamapi.LoginURL + "/jwt/refresh?redir=" + url.QueryEscape(steamapi.CommunityURL)
+	resp, err := s.api.GetNoRedirect(ctx, refreshURL, headers)
+	if err != nil {
+		return nil, fmt.Errorf("steamkit/auth: failed to refresh web token: %w", err)
+	}
+	resp.Body.Close()
+
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return nil, fmt.Errorf("steamkit/auth: failed to refresh web token: missing redirect location (status %d)", resp.StatusCode)
+	}
+
+	redirectResp, err := s.api.GetNoRedirect(ctx, location, headers)
+	if err != nil {
+		return nil, fmt.Errorf("steamkit/auth: failed to complete web token refresh: %w", err)
+	}
+	redirectResp.Body.Close()
+
+	for _, domain := range steamapi.AllDomainURLs {
+		for _, c := range s.api.GetCookies(domain) {
+			if c.Name != "steamLoginSecure" {
+				continue
+			}
+
+			token, err := ParseTokenFromCookie(c.Value)
+			if err != nil {
+				continue
+			}
+
+			s.accessToken = token
+			s.api.AccessToken = token.Raw
+			return token, nil
+		}
+	}
+
+	return nil, fmt.Errorf("steamkit/auth: failed to refresh web token: steamLoginSecure cookie was not set")
+}
 
 // Cookie represents a Steam web session cookie.
 type Cookie struct {
@@ -520,7 +582,7 @@ func (s *SteamSession) FinalizeLoginViaWeb(ctx context.Context) ([]Cookie, error
 
 	headers := http.Header{}
 	headers.Set("Accept", "application/json, text/plain, */*")
-	headers.Set("Referer", steamapi.CommunityURL + "/")
+	headers.Set("Referer", steamapi.CommunityURL+"/")
 	headers.Set("Origin", steamapi.CommunityURL)
 
 	resp, err := s.api.PostForm(ctx, steamapi.LoginURL+"/jwt/finalizelogin", data, headers)
