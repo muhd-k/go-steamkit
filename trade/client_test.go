@@ -53,6 +53,39 @@ func TestGetOffer(t *testing.T) {
 	}
 }
 
+func TestGetOfferWithAccessToken(t *testing.T) {
+	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if got := r.URL.Query().Get("access_token"); got == "" {
+			t.Fatalf("expected access_token param, got none")
+		}
+		if got := r.URL.Query().Get("key"); got != "" {
+			t.Fatalf("expected no key param, got %q", got)
+		}
+		return jsonResponse(`{"response":{"offer":{"tradeofferid":"42","accountid_other":123,"trade_offer_state":2}}}`), nil
+	})}
+
+	// Use an access token (web audience) so authParams falls back to access_token
+	const testAccessJWT = "eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJFZERTQSJ9.eyJpc3MiOiAic3RlYW0iLCAic3ViIjogIjc2NTYxMTk4MDEyMzQ1Njc4IiwgImF1ZCI6IFsid2ViOmNvbW11bml0eSIsICJ3ZWI6c3RvcmUiXSwgImV4cCI6IDIwMDAwMDAwMDAsICJuYmYiOiAxNzAwMDAwMDAwLCAiaWF0IjogMTcwMDAwMDAwMCwgImp0aSI6ICJ0ZXN0MTIzIiwgInBlciI6IDB9.ZmFrZXNpZzEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2"
+	sess, err := auth.NewSession(
+		auth.WithRefreshToken(testRefreshJWT),
+		auth.WithAccessToken(testAccessJWT),
+	)
+	if err != nil {
+		t.Fatalf("NewSession() error: %v", err)
+	}
+	client, err := NewClient(sess, "")
+	if err != nil {
+		t.Fatalf("NewClient() error: %v", err)
+	}
+	client.http = httpClient
+	client.webAPIBaseURL = "https://api.test"
+
+	_, err = client.GetOffer(context.Background(), 42, false)
+	if err != nil {
+		t.Fatalf("GetOffer() error: %v", err)
+	}
+}
+
 func TestGetOffersRequiresDirection(t *testing.T) {
 	client := &Client{apiKey: "api-key", http: http.DefaultClient}
 	if _, err := client.GetOffers(context.Background(), GetOffersOptions{}); err == nil {

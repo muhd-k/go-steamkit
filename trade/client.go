@@ -29,16 +29,16 @@ type Client struct {
 	communityBaseURL string
 }
 
-// NewClient creates a trade client from an authenticated Steam session and Web API key.
+// NewClient creates a trade client from an authenticated Steam session.
+//
+// The apiKey parameter is optional. If empty, the client will use the
+// session's access token for IEconService Web API calls instead.
 //
 // Call sess.ObtainCookies or sess.FinalizeLoginViaWeb before using methods that
 // touch steamcommunity.com, such as Send or Accept.
 func NewClient(sess *auth.SteamSession, apiKey string) (*Client, error) {
 	if sess == nil {
 		return nil, ErrSessionRequired
-	}
-	if apiKey == "" {
-		return nil, ErrAPIKeyRequired
 	}
 	if sess.APIClient() == nil {
 		return nil, ErrSessionRequired
@@ -53,13 +53,23 @@ func NewClient(sess *auth.SteamSession, apiKey string) (*Client, error) {
 	}, nil
 }
 
+// authParams returns url.Values containing either "key" (if an API key was
+// provided) or "access_token" (fallback to the session's access token).
+func (c *Client) authParams() url.Values {
+	if c.apiKey != "" {
+		return url.Values{"key": {c.apiKey}}
+	}
+	if c.session != nil && c.session.AccessToken() != nil {
+		return url.Values{"access_token": {c.session.AccessToken().Raw}}
+	}
+	return url.Values{}
+}
+
 // GetOffer retrieves a single trade offer by ID.
 func (c *Client) GetOffer(ctx context.Context, offerID uint64, descriptions bool) (*OfferResult, error) {
-	params := url.Values{
-		"key":          {c.apiKey},
-		"tradeofferid": {strconv.FormatUint(offerID, 10)},
-		"language":     {"en_us"},
-	}
+	params := c.authParams()
+	params.Set("tradeofferid", strconv.FormatUint(offerID, 10))
+	params.Set("language", "en_us")
 	if descriptions {
 		params.Set("get_descriptions", "1")
 	}
@@ -92,7 +102,7 @@ func (c *Client) GetOffers(ctx context.Context, opts GetOffersOptions) (*Offers,
 		return nil, fmt.Errorf("steamkit/trade: Sent and Received cannot both be false")
 	}
 
-	params := url.Values{"key": {c.apiKey}}
+	params := c.authParams()
 	if opts.Sent {
 		params.Set("get_sent_offers", "1")
 	}
@@ -146,10 +156,8 @@ func (c *Client) Cancel(ctx context.Context, offerID uint64) error {
 }
 
 func (c *Client) tradeAction(ctx context.Context, endpoint string, offerID uint64) error {
-	data := url.Values{
-		"key":          {c.apiKey},
-		"tradeofferid": {strconv.FormatUint(offerID, 10)},
-	}
+	data := c.authParams()
+	data.Set("tradeofferid", strconv.FormatUint(offerID, 10))
 	return c.postForm(ctx, c.webAPI(endpoint), data, nil, nil)
 }
 
