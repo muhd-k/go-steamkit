@@ -20,6 +20,12 @@ var (
 
 	// ErrEmptyResponse indicates that Steam returned a structurally valid response with no data.
 	ErrEmptyResponse = errors.New("steamkit/trade: Steam returned an empty response")
+
+	// ErrConfirmationNotFound indicates that no pending mobile confirmation matched the requested object.
+	ErrConfirmationNotFound = errors.New("steamkit/trade: confirmation not found")
+
+	// ErrUnauthenticated indicates that Steam rejected the current web session cookies.
+	ErrUnauthenticated = errors.New("steamkit/trade: Steam session is unauthenticated")
 )
 
 // SteamError is returned when Steam accepts a request but reports an action-level failure.
