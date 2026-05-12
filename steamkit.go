@@ -10,7 +10,7 @@
 //
 //   - [github.com/skinflippa/go-steamkit/auth] — Authentication, session management, and Steam Guard TOTP
 //   - [github.com/skinflippa/go-steamkit/trade] — Trade offer management
-//   - github.com/skinflippa/go-steamkit/inventory (Phase 3) — Inventory fetching
+//   - [github.com/skinflippa/go-steamkit/inventory] — Inventory fetching
 //
 // # Quick Start
 //
