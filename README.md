@@ -7,7 +7,7 @@ A well-documented Go client for Steam Web API interactions, built for bots and a
 ## Installation
 
 ```bash
-go get github.com/skinflippa/go-steamkit
+go get github.com/muhd-k/go-steamkit
 ```
 
 ## Features
