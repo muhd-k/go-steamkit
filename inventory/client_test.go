@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/skinflippa/go-steamkit/auth"
+	"github.com/muhd-k/go-steamkit/auth"
 )
 
 const testRefreshJWT = "eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJFZERTQSJ9.eyJpc3MiOiAic3RlYW0iLCAic3ViIjogIjc2NTYxMTk4MDEyMzQ1Njc4IiwgImF1ZCI6IFsiZGVyaXZlIl0sICJleHAiOiAyMDAwMDAwMDAwLCAibmJmIjogMTcwMDAwMDAwMCwgImlhdCI6IDE3MDAwMDAwMDAsICJqdGkiOiAicmVmcmVzaDEyMyIsICJwZXIiOiAwfQ.ZmFrZXNpZzEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2"

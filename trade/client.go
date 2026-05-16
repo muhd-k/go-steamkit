@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/skinflippa/go-steamkit/auth"
-	"github.com/skinflippa/go-steamkit/internal/steamapi"
+	"github.com/muhd-k/go-steamkit/auth"
+	"github.com/muhd-k/go-steamkit/internal/steamapi"
 )
 
 const (

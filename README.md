@@ -27,7 +27,7 @@ import (
     "context"
     "log"
 
-    "github.com/skinflippa/go-steamkit/auth"
+    "github.com/muhd-k/go-steamkit/auth"
 )
 
 func main() {
@@ -60,7 +60,7 @@ func main() {
 ### Trade Offers
 
 ```go
-import "github.com/skinflippa/go-steamkit/trade"
+import "github.com/muhd-k/go-steamkit/trade"
 
 // API key is optional — if empty, the session's access token is used
 client, err := trade.NewClient(sess, "")
@@ -77,7 +77,7 @@ if err != nil {
 ### Inventory
 
 ```go
-import "github.com/skinflippa/go-steamkit/inventory"
+import "github.com/muhd-k/go-steamkit/inventory"
 
 client, err := inventory.NewClient(sess)
 if err != nil {

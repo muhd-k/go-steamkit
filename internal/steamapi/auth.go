@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/skinflippa/go-steamkit/internal/protowire"
+	"github.com/muhd-k/go-steamkit/internal/protowire"
 )
 
 // --- IAuthenticationService Wrappers ---

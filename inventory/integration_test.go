@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/skinflippa/go-steamkit/auth"
+	"github.com/muhd-k/go-steamkit/auth"
 )
 
 // Run with: go test ./inventory -tags integration -v -run TestLiveInventory

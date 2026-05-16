@@ -8,9 +8,9 @@
 //
 // The package is organized into focused sub-packages:
 //
-//   - [github.com/skinflippa/go-steamkit/auth] — Authentication, session management, and Steam Guard TOTP
-//   - [github.com/skinflippa/go-steamkit/trade] — Trade offer management
-//   - [github.com/skinflippa/go-steamkit/inventory] — Inventory fetching
+//   - [github.com/muhd-k/go-steamkit/auth] — Authentication, session management, and Steam Guard TOTP
+//   - [github.com/muhd-k/go-steamkit/trade] — Trade offer management
+//   - [github.com/muhd-k/go-steamkit/inventory] — Inventory fetching
 //
 // # Quick Start
 //

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/skinflippa/go-steamkit/internal/cryptoutil"
-	"github.com/skinflippa/go-steamkit/internal/steamapi"
+	"github.com/muhd-k/go-steamkit/internal/cryptoutil"
+	"github.com/muhd-k/go-steamkit/internal/steamapi"
 )
 
 // SteamSession manages authentication state for a single Steam account.
