@@ -294,6 +294,33 @@ func (c *Client) getJSON(ctx context.Context, targetURL string, params url.Value
 	return c.doJSON(req, out)
 }
 
+// getRawBody performs a GET request and returns the raw response body.
+func (c *Client) getRawBody(ctx context.Context, targetURL string, params url.Values) ([]byte, error) {
+	if len(params) > 0 {
+		targetURL += "?" + params.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", targetURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("steamkit/trade: failed to create request: %w", err)
+	}
+	for k, v := range steamapiHeaders() {
+		req.Header[k] = v
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("steamkit/trade: request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("steamkit/trade: failed to read response: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("steamkit/trade: HTTP %d: %s", resp.StatusCode, string(body))
+	}
+	return body, nil
+}
+
 func (c *Client) postForm(ctx context.Context, targetURL string, data url.Values, headers http.Header, out interface{}) error {
 	req, err := http.NewRequestWithContext(ctx, "POST", targetURL, bytes.NewBufferString(data.Encode()))
 	if err != nil {

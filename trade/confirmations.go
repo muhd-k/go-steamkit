@@ -8,9 +8,12 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -60,18 +63,18 @@ type confirmationListResponse struct {
 	NeedAuth bool   `json:"needauth"`
 	Message  string `json:"message"`
 	Conf     []struct {
-		ID           string   `json:"id"`
-		Nonce        string   `json:"nonce"`
-		CreatorID    string   `json:"creator_id"`
-		CreationTime int64    `json:"creation_time"`
-		Type         int      `json:"type"`
-		Accept       string   `json:"accept"`
-		Cancel       string   `json:"cancel"`
-		Icon         string   `json:"icon"`
-		Multi        bool     `json:"multi"`
-		Headline     string   `json:"headline"`
-		Summary      []string `json:"summary"`
-		Warn         string   `json:"warn"`
+		ID           string          `json:"id"`
+		Nonce        string          `json:"nonce"`
+		CreatorID    string          `json:"creator_id"`
+		CreationTime int64           `json:"creation_time"`
+		Type         int             `json:"type"`
+		Accept       string          `json:"accept"`
+		Cancel       string          `json:"cancel"`
+		Icon         string          `json:"icon"`
+		Multi        bool            `json:"multi"`
+		Headline     string          `json:"headline"`
+		Summary      []string        `json:"summary"`
+		Warn         json.RawMessage `json:"warn"` // Steam returns string or []string
 	} `json:"conf"`
 }
 
@@ -93,9 +96,18 @@ func (c *Client) PendingConfirmationsWithDevice(ctx context.Context, identitySec
 		return nil, err
 	}
 
-	var out confirmationListResponse
-	if err := c.getJSON(ctx, c.communityBaseURL+confirmationBasePath+"/getlist", params, &out); err != nil {
+	// Fetch raw body first for logging/debugging
+	rawBody, err := c.getRawBody(ctx, c.communityBaseURL+confirmationBasePath+"/getlist", params)
+	if err != nil {
 		return nil, err
+	}
+
+	// Save raw response to disk for analysis
+	_ = os.WriteFile("steam_confirmations_raw.json", rawBody, 0600)
+
+	var out confirmationListResponse
+	if err := json.Unmarshal(rawBody, &out); err != nil {
+		return nil, fmt.Errorf("steamkit/trade: failed to decode response: %w", err)
 	}
 	if err := checkConfirmationResponse(out.Success, out.NeedAuth, out.Message); err != nil {
 		return nil, err
@@ -111,6 +123,8 @@ func (c *Client) PendingConfirmationsWithDevice(ctx context.Context, identitySec
 		if err != nil {
 			return nil, fmt.Errorf("steamkit/trade: failed to parse confirmation creator id %q: %w", raw.CreatorID, err)
 		}
+		// warn can be a string or []string in the Steam response
+		warnStr := decodeWarn(raw.Warn)
 		confs = append(confs, &Confirmation{
 			ID:           id,
 			Nonce:        raw.Nonce,
@@ -123,7 +137,7 @@ func (c *Client) PendingConfirmationsWithDevice(ctx context.Context, identitySec
 			Multi:        raw.Multi,
 			Headline:     raw.Headline,
 			Summary:      raw.Summary,
-			Warn:         raw.Warn,
+			Warn:         warnStr,
 		})
 	}
 	return confs, nil
@@ -189,14 +203,12 @@ func (c *Client) sendConfirmationAction(ctx context.Context, conf *Confirmation,
 	}
 
 	op := "cancel"
-	nonce := conf.Cancel
 	if accept {
 		op = "allow"
-		nonce = conf.Accept
 	}
-	if nonce == "" {
-		nonce = conf.Nonce
-	}
+	// Always use Nonce as ck — this matches aiosteampy's proven approach.
+	// The separate Accept/Cancel fields may be empty in practice.
+	nonce := conf.Nonce
 
 	params, err := c.confirmationParams(identitySecret, deviceID, op, time.Now())
 	if err != nil {
@@ -206,9 +218,16 @@ func (c *Client) sendConfirmationAction(ctx context.Context, conf *Confirmation,
 	params.Set("cid", strconv.FormatUint(conf.ID, 10))
 	params.Set("ck", nonce)
 
-	var out confirmationActionResponse
-	if err := c.getJSON(ctx, c.communityBaseURL+confirmationBasePath+"/ajaxop", params, &out); err != nil {
+	// Fetch raw response for logging
+	rawBody, err := c.getRawBody(ctx, c.communityBaseURL+confirmationBasePath+"/ajaxop", params)
+	if err != nil {
 		return err
+	}
+	_ = os.WriteFile("steam_accept_raw.json", rawBody, 0600)
+
+	var out confirmationActionResponse
+	if err := json.Unmarshal(rawBody, &out); err != nil {
+		return fmt.Errorf("steamkit/trade: failed to decode accept response: %w", err)
 	}
 	return checkConfirmationResponse(out.Success, out.NeedAuth, out.Message)
 }
@@ -271,6 +290,24 @@ func parseConfirmationType(v int) ConfirmationType {
 		return ConfirmationTypeUnknown
 	}
 	return ConfirmationType(v)
+}
+
+// decodeWarn handles Steam returning warn as either a JSON string or a JSON array.
+func decodeWarn(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	// Try string first
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		return s
+	}
+	// Fall back to array of strings
+	var arr []string
+	if err := json.Unmarshal(raw, &arr); err == nil {
+		return strings.Join(arr, "\n")
+	}
+	return ""
 }
 
 func checkConfirmationResponse(success bool, needAuth bool, message string) error {
