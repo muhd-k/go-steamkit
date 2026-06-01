@@ -228,25 +228,25 @@ func (c *Client) fetchPage(ctx context.Context, steamID uint64, appID uint32, co
 					continue
 				}
 				acc := &AssetAccessory{
-					ClassID: ra.ClassID,
+					ClassID: ra.ClassID.Uint64(),
 				}
 				for _, rp := range ra.ParentRelationshipProperties {
 					if rp == nil {
 						continue
 					}
-					acc.ParentRelationshipProperties = append(acc.ParentRelationshipProperties, &AssetProperty{
-						PropertyID: rp.PropertyID,
-						Value:      rp.Value,
-					})
+							acc.ParentRelationshipProperties = append(acc.ParentRelationshipProperties, &AssetProperty{
+								PropertyID: rp.PropertyID.Uint64(),
+								Value:      rp.Value,
+							})
 				}
 				for _, rp := range ra.StandaloneProperties {
 					if rp == nil {
 						continue
 					}
-					acc.StandaloneProperties = append(acc.StandaloneProperties, &AssetProperty{
-						PropertyID: rp.PropertyID,
-						Value:      rp.Value,
-					})
+							acc.StandaloneProperties = append(acc.StandaloneProperties, &AssetProperty{
+								PropertyID: rp.PropertyID.Uint64(),
+								Value:      rp.Value,
+							})
 				}
 				item.Accessories = append(item.Accessories, acc)
 			}

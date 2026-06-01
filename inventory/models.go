@@ -204,12 +204,12 @@ type rawAssetProperties struct {
 }
 
 type rawAssetProperty struct {
-	PropertyID uint64 `json:"propertyid"`
-	Value      string `json:"value"`
+	PropertyID flexUint64 `json:"propertyid"`
+	Value      string     `json:"value"`
 }
 
 type rawAssetAccessory struct {
-	ClassID                      uint64             `json:"classid"`
+	ClassID                      flexUint64          `json:"classid"`
 	ParentRelationshipProperties []*rawAssetProperty `json:"parent_relationship_properties"`
 	StandaloneProperties         []*rawAssetProperty `json:"standalone_properties"`
 }
