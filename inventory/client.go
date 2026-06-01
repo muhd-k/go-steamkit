@@ -219,7 +219,7 @@ func (c *Client) fetchPage(ctx context.Context, steamID uint64, appID uint32, co
 					continue
 				}
 				item.Properties = append(item.Properties, &AssetProperty{
-					PropertyID: rp.PropertyID,
+					PropertyID: uint64(rp.PropertyID),
 					Value:      rp.Value,
 				})
 			}
